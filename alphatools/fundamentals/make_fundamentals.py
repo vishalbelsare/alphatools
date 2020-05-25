@@ -15,8 +15,7 @@ import pandas as pd
 trading_calendar = get_calendar('NYSE')
 bundle_data = bundles.load('quandl')
 
-data_file = 'path/to/sharadar/data'
-
+data_file = '/home/ubuntu/hca/quandl_data/SHARADAR_SF1_086134faf658fcc2cdcb53f4295b5fad.zip'
 df = pd.read_csv(data_file)#, nrows=1000)
 df['Date'] = pd.to_datetime(df['Date'])
 

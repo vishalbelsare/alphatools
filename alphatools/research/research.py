@@ -23,7 +23,7 @@ load_extensions(
 
 # Set-Up Pricing Data Access
 trading_calendar = get_calendar('NYSE')
-bundle = 'quandl'
+bundle = 'sharadar-prices' #'quandl'
 bundle_data = bundles.load(bundle)
 
 
