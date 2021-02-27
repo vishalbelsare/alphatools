@@ -11,9 +11,36 @@ from datetime import datetime
 import pytz
 from pytz import timezone as _tz  # Python only does once, makes this portable.
           #   Move to top of algo for better efficiency.
-
+from dotenv import load_dotenv
+          
+from zipline.utils.paths import data_root
 from zipline.data import bundles
 
+def load_env_file():
+  # Expecting, e.g.:
+  # IB_ACCOUNTS=DU1234567,U9876543,DU38383838,U92929292
+  #
+  # for Sharadar ingestion
+  # QUANDL_API_KEY=bEx90ss9xlad-sj9clsl
+  fname = os.environ.get('HCA_ENV_FILE', "")
+  if not fname:
+    msg = "No env variable HCA_ENV_FILE, please set."
+    print(msg)
+    #st.write(msg)
+    sys.exit()
+  load_dotenv(dotenv_path=fname)
+  success = True
+  msg = ""
+  for k in ["ZIPLINE_ROOT", "QUANDL_API_KEY"]:
+    if k not in os.environ.keys():
+      msg += f"Please set value of {k} in {fname}\n"
+      success = False
+  print(msg)
+  if success:
+    print(f"Successfully loaded config file {fname}!")
+  else:
+    #st.write(msg)
+    sys.exit()
 
 
 def download_without_progress(url):
@@ -57,9 +84,13 @@ def download_url_to_targetfile(url, targetfile="/tmp/tartgetfile"):
   #return io.BytesIO(resp.content)
   return resp.status_code
 
-
-
-api_key = 'FbEx4ddtmMx1-WkAvZVt' # enter your api key, it can be found in your Quandl account here: https://www.quandl.com/account/profile
+load_env_file()
+api_key = os.environ.get('QUANDL_API_KEY')
+if api_key is None:
+  raise ValueError(
+        "Please set your QUANDL_API_KEY environment variable and retry."
+      )
+#api_key = 'FbEx4ddtmMx1-WkAvZVt' # enter your api key, it can be found in your Quandl account here: https://www.quandl.com/account/profile
 table = 'SF1' # enter the Sharadar table you would like to retrieve
 destFileRef = 'SF1_download2.csv.zip' # enter the destination that you would like the retrieved data to be saved to
 #csv url = 'https://www.quandl.com/api/v3/datatables/SHARADAR/%s.csv?qopts.export=true&api_key=%s' % (table, api_key) # optionally add parameters to the url to filter the data retrieved, as described in the associated table's documentation, eg here: https://www.quandl.com/databases/SF1/documentation/getting-started
@@ -101,7 +132,12 @@ while status not in valid:
     time.sleep(60)
 
 print('fetching from %s' % link)
-fundementals_dir  = '/home/ubuntu/.zipline/data/fundem-sharadar-sf1'
+      
+this_user_path = os.path.expanduser("~")
+zipline_data_root_path = data_root()
+fundementals_dir  = os.path.join(zipline_data_root_path,'fundem-sharadar-sf1')
+#fundementals_dir  = os.path.join(this_user_path,'.zipline/data/fundem-sharadar-sf1')
+
 fundem_target_dir = os.path.join(fundementals_dir, last_refreshed_time_dir)
 
 if not os.path.exists(fundem_target_dir):
