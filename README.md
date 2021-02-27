@@ -3,6 +3,8 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Python](https://img.shields.io/badge/Python-3.5|3.6-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Build Status](https://travis-ci.org/marketneutral/alphatools.svg?branch=master)](https://travis-ci.org/marketneutral/alphatools)
+[![T-shirt](https://img.shields.io/badge/buy-t--shirt-informational)](https://teespring.com/shop/alphatools-t-shirt)
+
 
 This package aims to provide environments within which best-in-class open source tools across **both** financial research (e.g., `zipline`, `alphelens`, and `pyfolio`) and machine learning (e.g., `scikit-learn`, `LightGBM`, `PyMC3`, `pytorch`, and `fastai`) operate together. The "stable" enviroment is on Python 3.5 and does not include `fastai`. The "latest" environment is on Python 3.6 and relies on the backwards compatibility PEP for packages which state only 3.5 support (e.g., `zipline`). The latest environment includes the pre-release of PyTorch 1.0 and fastai 1.0.x. The PyTorch version in both environments is currently "CPU" only (i.e., no GPU/CUDA for now). The "tests" are only testing that the environments are built without conflict for now.
 
@@ -24,24 +26,25 @@ from zipline.pipeline.data import USEquityPricing as USEP
 from zipline.pipeline.factors import Returns, AverageDollarVolume
 from zipline.pipeline import Pipeline
 
-universe = AverageDollarVolume(window_length=120).top(500)
+n_assets = 500
+universe = AverageDollarVolume(window_length=120).top(n_assets)
 
 my_factor = (
-    -Returns(mask=universe, window_length=5).
-    demean(groupby=Sector()).
-    rank()
+    (-Returns(mask=universe, window_length=5)
+      .demean(groupby=Sector()))
+    .rank()/n_assets
 )
 
 expr_factor = (
     ExpressionAlpha(
-        'rank(indneutralize(-log(close/delay(close, 4))),IndClass.sector)'
-    ).pipeline_factor(mask=universe)
+        'rank(indneutralize(-log(close/delay(close, 4)), IndClass.sector))'
+    ).make_pipeline_factor().pipeline_factor(mask=universe)
 )
 
 p = Pipeline(screen=universe)
 
 p.add(my_factor, '5d_MR_Sector_Neutral_Rank')
-p.add(expr_factor, '5d_MR_Expression Alpha')
+p.add(expr_factor, '5d_MR_Expression_Alpha')
 
 p.add(Factory['my_special_data'].value.latest.zscore(), 'Special_Factor')
 
@@ -218,7 +221,7 @@ Sector and Industry data were scraped from Yahoo Finance on September 18, 2017 f
 
 ## A Word on Fundamental Data
 
-Altough there is a `Fundamentals` factor included, there is no Fundamental data included in the package. This factor was built on top of the `DataFrameLoader` to get a `pandas.DataFrame` into a factor. I think I will deprecate this in favor of using the `Factory` object as described above. In the meantime, the `Fundamentals` pipeline factors can be built from `make_fundamentals.py` with your own data. Note that these factors use the `DataFrameLoader` which means the data must fit in memory. 
+Although there is a `Fundamentals` factor included, there is no Fundamental data included in the package. This factor was built on top of the `DataFrameLoader` to get a `pandas.DataFrame` into a factor. I think I will deprecate this in favor of using the `Factory` object as described above. In the meantime, the `Fundamentals` pipeline factors can be built from `make_fundamentals.py` with your own data. Note that these factors use the `DataFrameLoader` which means the data must fit in memory. 
 
 ## Disclaimer
 
@@ -228,11 +231,6 @@ Additionally, nothing in this package constitutes investment advice. This packag
 
 Lastly, there are no automated tests (or any significnat tests for that matter), no automated nightly build, no docstrings, or any other features associated with what you might consider a well supported open source package. 
 
-## Contributing
 
-I hope you enjoy this package. Please leave feedback, or better, contribute. If you are planning to make a PR, please get in touch with me before you do any work as I have a project plan. I am figuring this out as I go and could use help, especially with (in order)
 
-- Incorporating `six` so that the package works with Python 3.x and Python 2.7
-- Creating tests and using Travis CI on this repo
-- Python packaging
-- Dockerizing this thing so we can avoid the painful install process
+I hope you enjoy this package. Please leave feedback.
