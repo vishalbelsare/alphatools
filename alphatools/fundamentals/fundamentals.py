@@ -88,6 +88,14 @@ sharadar_f1_top25 = [
 'marketcap',
 'debtnc',
 "equityusd",
+
+"liabilities",
+"liabilitiesnc",
+"assets",
+"ev",
+"ebt",
+"ebit",
+"cashneq",
 ]
 #,
 #"ticker",
