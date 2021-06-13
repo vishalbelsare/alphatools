@@ -61,59 +61,74 @@ df=df.reset_index() # Date is now a col, and index is default. Setup for below l
 #df.groupby(['newidx', 'Code'], as_index=False)['val'].max().unstack()
 
 sharadar_f1_top25 = [
-"revenue",
-"opex",
-"netinc",
-"equity",
-"debt",
-"ebitda",
+#"revenue",
+#"opex",
+#"netinc",
+#"equity",
+#"debt",
+#"ebitda",
 
-"revenueusd",
-"debtusd",
-"dps",
+#"revenueusd",
+#"debtusd",
+#"dps",
 "fcf",
-"gp",
-"grossmargin",
-"netmargin",
-"ros",
-"payoutratio",
-"pe1",
-"ps1",
-"pb",
+#"gp",
+#"grossmargin",
+#"netmargin",
+#"ros",
+#"payoutratio",
+#"pe1",
+#"ps1",
+#"pb",
 
-"divyield",
-"currentratio",
+#"divyield",
+#"currentratio",
 
 "de",
 'marketcap',
 'debtnc',
 "equityusd",
 
-"liabilities",
-"liabilitiesnc",
-"assets",
-"ev",
-"ebt",
-"ebit",
-"cashneq",
+#"liabilities",
+#"liabilitiesnc",
+#"assets",
+#"ev",
+#"ebt",
+#"ebit",
+#"cashneq",
 ]
 #,
 #"ticker",
 #"reportperiod",
 #]
 
+sharadar_tickers = [
+"category", #type: str
+"exchange", #type str
+"isdelisted",#type str
+]
+
 fundy_frames = OrderedDict()
 for name  in sharadar_f1_top25:
     print("Adding fundamental:{}".format(name))
     fundy_frames[name]         = df[['datekey',name, 'sid']].reset_index().set_index(['datekey', 'sid']).sort_index()
-    fundy_frames[name] = fundy_frames[name].pivot_table(values=name, index='datekey', columns='sid', aggfunc='max', fill_value=None, margins=False, dropna=True, margins_name='All')
+    fundy_frames[name]         = fundy_frames[name].pivot_table(values=name, index='datekey', columns='sid', aggfunc='max', fill_value=None, margins=False, dropna=True, margins_name='All')
     fundy_frames[name].index   = pd.to_datetime(fundy_frames[name].index)
     fundy_frames[name].index   = fundy_frames[name].index.tz_localize('UTC')
     fundy_frames[name]         = fundy_frames[name].sort_index().fillna(method='ffill')
 
-
-
-
+for name  in sharadar_tickers:
+    print("Adding tickers:{}".format(name))
+    fundy_frames[name]         = df[['datekey',name, 'sid']].reset_index().set_index(['datekey', 'sid']).sort_index()
+    #fundy_frames[name]         = fundy_frames[name].pivot_table(values=name, index='datekey', columns='sid', fill_value='NullCat', margins=False, aggfunc=lambda x: ' '.join(x), dropna=True, margins_name='All')
+    fundy_frames[name]         = fundy_frames[name].pivot_table(values=name, index='datekey', columns='sid', fill_value=None, margins=False, aggfunc=lambda x: ' '.join(x), dropna=False, margins_name='All')
+    fundy_frames[name].index   = pd.to_datetime(fundy_frames[name].index)
+    fundy_frames[name].index   = fundy_frames[name].index.tz_localize('UTC')
+    fundy_frames[name]         = fundy_frames[name].sort_index().fillna(axis=1, method='ffill').fillna(axis=1,method='bfill') # doesn't work for 2d.astype('category')
+    #fundy_frames[name]         = fundy_frames[name].sort_index().fillna(method='ffill')
+    #fundy_frames[name]         = fundy_frames[name].ffill()
+    
+    ###fundy_frames[name]         = fundy_frames[name].sort_index().fillna(method='ffill')
 
 ###MarketCap_frame         = df[['datekey','marketcap', 'sid']].reset_index().set_index(['datekey', 'sid']).sort_index()
 ###MarketCap_frame = MarketCap_frame.pivot_table(values='marketcap', index='datekey', columns='sid', aggfunc='max', fill_value=None, margins=False, dropna=True, margins_name='All')
@@ -167,8 +182,10 @@ for name  in sharadar_f1_top25:
 # A DataSet with lots of columns.
 class Fundamentals(DataSet):
     locals().update({
-        name: Column(dtype=float)
-        for name in sharadar_f1_top25
+        name: Column(dtype=float)  for name in sharadar_f1_top25
+    })
+    locals().update({
+            name: Column(dtype=object)  for name in sharadar_tickers
     })
     
 #class Fundamentals(DataSet):
@@ -185,9 +202,12 @@ class Fundamentals(DataSet):
 for name  in sharadar_f1_top25:
     loaders[Fundamentals.get_column(name)] = DataFrameLoader(Fundamentals.get_column(name), fundy_frames[name] )
 
-#loaders[Fundamentals.DE] = DataFrameLoader(Fundamentals.DE, DE_frame)
+for name  in sharadar_tickers:
+    loaders[Fundamentals.get_column(name)] = DataFrameLoader(Fundamentals.get_column(name), fundy_frames[name] )
+
+#loaders[Fundamentals.DE]        = DataFrameLoader(Fundamentals.DE, DE_frame)
 #loaders[Fundamentals.MarketCap] = DataFrameLoader(Fundamentals.MarketCap, MarketCap_frame)
-#loaders[Fundamentals.EUSD] = DataFrameLoader(Fundamentals.EUSD, EUSD_frame)
-#loaders[Fundamentals.DNC] = DataFrameLoader(Fundamentals.DNC, DNC_frame)
+#loaders[Fundamentals.EUSD]      = DataFrameLoader(Fundamentals.EUSD, EUSD_frame)
+#loaders[Fundamentals.DNC]       = DataFrameLoader(Fundamentals.DNC, DNC_frame)
 
 df_loaders=loaders
