@@ -64,8 +64,8 @@ sharadar_f1_top25 = [
 #"revenue",
 #"opex",
 #"netinc",
-#"equity",
-#"debt",
+"equity",
+"debt",
 #"ebitda",
 
 #"revenueusd",
@@ -91,7 +91,7 @@ sharadar_f1_top25 = [
 
 #"liabilities",
 #"liabilitiesnc",
-#"assets",
+"assets",
 #"ev",
 #"ebt",
 #"ebit",
@@ -124,7 +124,8 @@ for name  in sharadar_tickers:
     fundy_frames[name]         = fundy_frames[name].pivot_table(values=name, index='datekey', columns='sid', fill_value=None, margins=False, aggfunc=lambda x: ' '.join(x), dropna=False, margins_name='All')
     fundy_frames[name].index   = pd.to_datetime(fundy_frames[name].index)
     fundy_frames[name].index   = fundy_frames[name].index.tz_localize('UTC')
-    fundy_frames[name]         = fundy_frames[name].sort_index().fillna(axis=1, method='ffill').fillna(axis=1,method='bfill') # doesn't work for 2d.astype('category')
+    fundy_frames[name]         = fundy_frames[name].sort_index() # doesn't work for 2d.astype('category')
+    #fundy_frames[name]         = fundy_frames[name].sort_index().fillna(axis=1, method='ffill').fillna(axis=1,method='bfill') # doesn't work for 2d.astype('category')
     #fundy_frames[name]         = fundy_frames[name].sort_index().fillna(method='ffill')
     #fundy_frames[name]         = fundy_frames[name].ffill()
     
