@@ -61,7 +61,7 @@ def download_without_progress(url):
   resp.raise_for_status()
   return io.BytesIO(resp.content)
 
-def download_url_to_targetfile(url, targetfile="/tmp/tartgetfile"):
+def download_url_to_targetfile(url, targetfile_parm="/tmp/tartgetfile", table_parm='SF1'):
   """
   Download data from a URL, writing a file in target dir.
 
@@ -70,12 +70,17 @@ def download_url_to_targetfile(url, targetfile="/tmp/tartgetfile"):
   url : str
       A URL that can be understood by ``requests.get``.
 
+  table : str
+      A Sharadar table name.
+
   Returns
   -------
   data : BytesIO
       A BytesIO containing the downloaded data.
   """
-
+  targetfile = targetfile_parm
+  table = table_parm
+  
   resp = requests.get(url, timeout=50)
   resp.raise_for_status()
   with open(targetfile, 'wb') as f:
@@ -84,18 +89,28 @@ def download_url_to_targetfile(url, targetfile="/tmp/tartgetfile"):
   #return io.BytesIO(resp.content)
   return resp.status_code
 
+
+
+
+### Start: Sharadar table process code:
 load_env_file()
 api_key = os.environ.get('QUANDL_API_KEY')
 if api_key is None:
   raise ValueError(
         "Please set your QUANDL_API_KEY environment variable and retry."
       )
+
+
 #api_key = 'FbEx4ddtmMx1-WkAvZVt' # enter your api key, it can be found in your Quandl account here: https://www.quandl.com/account/profile
-table = 'SF1' # enter the Sharadar table you would like to retrieve
-destFileRef = 'SF1_download2.csv.zip' # enter the destination that you would like the retrieved data to be saved to
+#table = SF1' # enter the Sharadar table you would like to retrieve
 #csv url = 'https://www.quandl.com/api/v3/datatables/SHARADAR/%s.csv?qopts.export=true&api_key=%s' % (table, api_key) # optionally add parameters to the url to filter the data retrieved, as described in the associated table's documentation, eg here: https://www.quandl.com/databases/SF1/documentation/getting-started
+
+tablef = 'SF1'
+tablet = 'TICKERS'
+
 #json
-url = 'https://www.quandl.com/api/v3/datatables/SHARADAR/%s.json?qopts.export=true&api_key=%s' % (table, api_key) # optionally add parameters to the url to filter the data retrieved, as described in the associated table's documentation, eg here: https://www.quandl.com/databases/SF1/documentation/getting-started
+urlf = 'https://www.quandl.com/api/v3/datatables/SHARADAR/%s.json?qopts.export=true&api_key=%s' % (tablef, api_key) # optionally add parameters to the url to filter the data retrieved, as described in the associated table's documentation, eg here: https://www.quandl.com/databases/SF1/documentation/getting-started
+urlt = 'https://www.quandl.com/api/v3/datatables/SHARADAR/%s.json?qopts.export=true&api_key=%s' % (tablet, api_key) # optionally add parameters to the url to filter the data retrieved, as described in the associated table's documentation, eg here: https://www.quandl.com/databases/SF1/documentation/getting-started
 
 #version = sys.version.split(' ')[0]
 #if version < '3':
@@ -107,31 +122,36 @@ url = 'https://www.quandl.com/api/v3/datatables/SHARADAR/%s.json?qopts.export=tr
 
 valid = ['fresh','regenerating']
 invalid = ['generating']
-status = ''
+statusf = statust = ''
 
-while status not in valid:
+while (statusf not in valid) or (statust not in valid):
   #Dict = json.loads(fn(url).read())
 
-  Dict = json.loads(download_without_progress(url).read())
+  Dictf = json.loads(download_without_progress(urlf).read())
+  Dictt = json.loads(download_without_progress(urlt).read())
 
-  last_refreshed_time = Dict['datatable_bulk_download']['datatable']['last_refreshed_time']
-  status = Dict['datatable_bulk_download']['file']['status']
-  link = Dict['datatable_bulk_download']['file']['link']
+  last_refreshed_timef = Dictf['datatable_bulk_download']['datatable']['last_refreshed_time']
+  statusf = Dictf['datatable_bulk_download']['file']['status']
+  linkf = Dictf['datatable_bulk_download']['file']['link']
+
+  last_refreshed_timet = Dictt['datatable_bulk_download']['datatable']['last_refreshed_time']
+  statust = Dictt['datatable_bulk_download']['file']['status']
+  linkt = Dictt['datatable_bulk_download']['file']['link']
 
   from datetime import datetime
 
-  date_string = last_refreshed_time
+  date_string = last_refreshed_timef
   last_refreshed_time_dt = datetime.strptime(date_string, '%Y-%m-%d %H:%M:%S %Z')
   last_refreshed_time_dir = datetime.strftime(last_refreshed_time_dt, '%Y-%m-%dT%H;%M;%S')
 
   print(last_refreshed_time_dir)
 
 
-  print(status)
-  if status not in valid:
+  print(statusf)
+  if statusf not in valid:
     time.sleep(60)
 
-print('fetching from %s' % link)
+print('fetching from %s' % linkf)
       
 this_user_path = os.path.expanduser("~")
 zipline_data_root_path = data_root()
@@ -143,17 +163,28 @@ fundem_target_dir = os.path.join(fundementals_dir, last_refreshed_time_dir)
 if not os.path.exists(fundem_target_dir):
   os.makedirs(fundem_target_dir)
 
-fundem_target_file = os.path.join(fundem_target_dir, "SF1_table.zip")
-zipl= (download_url_to_targetfile(link, fundem_target_file)) #Byte Stream
-print("Done:SF1 scrape: last_refreshed_time:{} target_dir:{}".format(last_refreshed_time, fundem_target_file))
+fundem_target_filef = os.path.join(fundem_target_dir, tablef + "_table.zip")
+fundem_target_filet = os.path.join(fundem_target_dir, tablet + "_table.zip")
+
+ziplf= (download_url_to_targetfile(linkf, fundem_target_filef, tablef)) #Byte Stream
+ziplt= (download_url_to_targetfile(linkt, fundem_target_filet, tablet)) #Byte Stream
+print("Done: {} scrape: last_refreshed_timef:{} target_dir:{}".format(tablef, last_refreshed_timef, fundem_target_filef))
+print("Done: {} scrape: last_refreshed_timet:{} target_dir:{}".format(tablet, last_refreshed_timet, fundem_target_filet))
 
 fundem_csv = None
-with zipfile.ZipFile(fundem_target_file, 'r') as fundy_zip:
+with zipfile.ZipFile(fundem_target_filef, 'r') as fundy_zip:
     fundem_csv = fundy_zip.infolist()[0]
     fundy_zip.extractall(fundem_target_dir)
+    print("fundem_csv={}".format( fundem_csv))
+    print("End: ingest quandl-sharadar-" + tablef + "-table")
 
-print("fundem_csv={}".format( fundem_csv))
-print("End: ingest quandl-sharadar-SF1-table")
+    
+fundem_csv = None
+with zipfile.ZipFile(fundem_target_filet, 'r') as fundy_zip:
+    fundem_csv = fundy_zip.infolist()[0]
+    fundy_zip.extractall(fundem_target_dir)
+    print("fundem_csv={}".format( fundem_csv))
+    print("End: ingest quandl-sharadar-" + tablet + "-table")
 ##zipString = (download_without_progress(link).read()) #Byte Stream
 ####zipString = (fn(link).read()) #Byte Stream
 ##zipString = str(fn(link).read()) #Str Stream
@@ -173,27 +204,35 @@ bundle_data = bundles.load('sharadar-prices')
 
 
 # Fundementals from Quandl stored in a <name>.csv.zip file on local disk now(future place :AWS S3)
-df = pd.read_csv(fundem_target_file)#, nrows=1000)
+dff = pd.read_csv(fundem_target_filef)#, nrows=1000)
+dft = pd.read_csv(fundem_target_filet)#, nrows=1000)
 
-print(df.head())
-print(df.describe())
-df=df[(df.dimension=='ARQ')] # Only take As-Reported-Quarterly (ARQ) dimension
+#print(dff.head())
+#print(dff.describe())
+
+
+dff=dff[(dff.dimension=='ARQ')] # Only take As-Reported-Quarterly (ARQ) dimension
+dft=dft[(dft.table=='SEP')] # Only take SharadarEquityPrices table
+
 ###df.loc[:,'Date'] = pd.to_datetime(df.calendardate)
 ###df
 
 #df['sid'] = 0 #original: np.nan
 ###df.set_index('Date', inplace=True)
-df.info()
+#dff.info()
 ###if df.index.tzinfo is None:
 ###  df.index = df.index.tz_localize('UTC')
 ###dates = df.index.unique()
 ###print("NumberOfDates={} Dates={}".format(len(dates),dates))
 
+
+
+
 current_time  = pd.datetime.utcnow()
-start_session = df.datekey.max()
+start_session = dff.datekey.max()
 end_session   = current_time
 extend_sessions = trading_calendar.sessions_in_range(start_session, end_session)
-print ("\nSF1 Table needs to extend sessions from:max datekey:{} tp  current date:{} ExtendRange:{}\n".format(start_session,end_session,extend_sessions))
+print ("\n {} Table needs to extend sessions from:max datekey:{} tp  current date:{} ExtendRange:{}\n".format(tablef, start_session,end_session,extend_sessions))
 
 def get_sid(row, day):
   ticker = row.ticker
@@ -212,19 +251,93 @@ def get_sid(row, day):
     #print("Bad:Date={} ticker = {} result={} this_sid={}".format(day, ticker, this_ticker, this_sid))
   return this_sid
 
+def get_cat(row, day, dft):
+  ticker = row.ticker
+  #DomComStk_lst= [
+    #'Domestic Common Stock',
+         ##'ADR Common Stock',
+   #'Domestic Common Stock Primary Class',
+         ##'Canadian Common Stock',
+         ##'ADR Common Stock Primary Class',
+         ##'Canadian Common Stock Primary Class',
+         ##'Domestic Common Stock Secondary Class', 'Domestic Stock Warrant',
+         ##'Domestic Preferred Stock', 'ADR Stock Warrant',
+         ##'ADR Preferred Stock', 'ADR Common Stock Secondary Class',
+         ##'Canadian Stock Warrant', 'Canadian Preferred Stock', nan, 'ETF',
+         ##'CEF', 'ETN', 'ETD', 'IDX'
+  #]  
+  #day = pd.to_datetime(row.datekey).tz_localize('US/Eastern')
+  #day = pd.to_datetime(row.calendardate).tz_localize('US/Eastern')
+  #print("row={} --- rowday={}".format(row,day))
+  this_cat = None
+  this_ticker = None
+  try:
+    this_ticker = bundle_data.asset_finder.lookup_symbol(ticker, as_of_date= day)
+    this_sid = this_ticker.sid
+    #melt = melt.loc[melt['col'] == melt['variable'], 'value']
+    
+    this_cat = dft[dft.ticker==ticker].category.values[0] #str type
+    #print("Good:Date={} ticker = {} cat={} this_sid={}".format(day, ticker, this_cat, this_sid))
 
-# Main computation of linking Sharadar SF1 Fundamentals Tabe to
-df['sid'] = df.apply(lambda x:get_sid(x, pd.to_datetime(x.datekey).tz_localize('US/Eastern')), axis=1)
+  except:
+    this_sid = -1
+    this_cat = None # empty string
+    #print("Bad:Date={} ticker = {} cat={} this_sid={}".format(day, ticker, this_cat, this_sid))
+  return this_cat
+
+def get_exchange(row, day, dft):
+  ticker = row.ticker
+  this_cat = None
+  this_ticker = None
+  try:
+    this_ticker = bundle_data.asset_finder.lookup_symbol(ticker, as_of_date= day)
+    this_sid = this_ticker.sid
+    #melt = melt.loc[melt['col'] == melt['variable'], 'value']
+    
+    this_cat = dft[dft.ticker==ticker].exchange.values[0] #str type
+    #print("Good:Date={} ticker = {} cat={} this_sid={}".format(day, ticker, this_cat, this_sid))
+
+  except:
+    this_sid = -1
+    this_cat = None # empty string
+    #print("Bad:Date={} ticker = {} cat={} this_sid={}".format(day, ticker, this_cat, this_sid))
+  return this_cat
+
+def get_isdelisted(row, day, dft):
+  ticker = row.ticker
+  this_cat = None
+  this_ticker = None
+  try:
+    this_ticker = bundle_data.asset_finder.lookup_symbol(ticker, as_of_date= day)
+    this_sid = this_ticker.sid
+    #melt = melt.loc[melt['col'] == melt['variable'], 'value']
+    
+    this_cat = dft[dft.ticker==ticker].isdelisted.values[0] #str type
+    #print("Good:Date={} ticker = {} cat={} this_sid={}".format(day, ticker, this_cat, this_sid))
+
+  except:
+    this_sid = -1
+    this_cat = None # empty string
+    #print("Bad:Date={} ticker = {} cat={} this_sid={}".format(day, ticker, this_cat, this_sid))
+  return this_cat
+
+
+# Main computation of linking Sharadar SF1 Fundamentals Table to
+dff['sid'] = dff.apply(lambda x:get_sid(x, pd.to_datetime(x.datekey).tz_localize('US/Eastern')), axis=1)
 #df = df.assign(sid=Sid_col.values)
+
+dff['category']=dff.apply(lambda x:get_cat(x, pd.to_datetime(x.datekey).tz_localize('US/Eastern'), dft), axis=1)
+dff['exchange']=dff.apply(lambda x:get_exchange(x, pd.to_datetime(x.datekey).tz_localize('US/Eastern'), dft), axis=1)
+dff['isdelisted']=dff.apply(lambda x:get_isdelisted(x, pd.to_datetime(x.datekey).tz_localize('US/Eastern'), dft), axis=1)
 
 fund_data_persistent_store_file = os.path.join(fundem_target_dir, "quandal_sharadar_sf1.pkl")
 
-df.to_pickle(fund_data_persistent_store_file)
+dff.to_pickle(fund_data_persistent_store_file)
 #Final sanity check
-print(df.info())
+print(dff.info())
 #[type(df[x][0]) for x in df.columns] #dtypes: float64(105), int64(1), object(6)    NOTE: All objects are strings. the sid column is int64, with 0 encoding NA
-print([x for x in df.columns])
-df.head()
+print([x for x in dff.columns])
+dff.head()
 
 
 print("end--ingest SF1")
